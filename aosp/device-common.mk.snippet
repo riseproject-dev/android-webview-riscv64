@@ -1,0 +1,7 @@
+# Add to the product makefile that also pulls in the rest of the device
+# configuration. The module name comes from aosp/webview/Android.bp.
+#
+# com.android.webview is availableByDefault in config_webview_packages.xml, so no
+# framework overlay is needed: installing the package is enough to make it the
+# default WebView provider.
+PRODUCT_PACKAGES += webview_riscv64

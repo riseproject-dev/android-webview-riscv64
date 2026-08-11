@@ -1,0 +1,24 @@
+// Copyright (C) 2026 The Android Open Source Project
+// SPDX-License-Identifier: Apache-2.0
+
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+// RISC-V WebView provider. Chromium ships no official riscv64 WebView prebuilt, so
+// import the locally-built system_webview_apk (com.android.webview) here rather than
+// patching external/chromium-webview, which would require forking that AOSP repo.
+// enforce_uses_libs:false skips the <uses-library> verification: the APK's optional
+// uses-libs (e.g. android.ext.adservices) aren't visible to a device-tree module.
+// com.android.webview is availableByDefault in config_webview_packages.xml -> default provider.
+android_app_import {
+    name: "webview_riscv64",
+    apk: "SystemWebView64.apk",
+    product_specific: true,
+    default_dev_cert: true,
+    enforce_uses_libs: false,
+    required: [
+        "libwebviewchromium_loader",
+        "libwebviewchromium_plat_support",
+    ],
+}

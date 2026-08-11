@@ -1,0 +1,29 @@
+# gn arguments for the riscv64 SystemWebView build.
+# This is the exact configuration that produced the APK verified on a SpacemiT K1
+# running Android 17.
+
+target_os = "android"
+target_cpu = "riscv64"
+
+is_debug = false
+is_official_build = true
+is_component_build = false
+symbol_level = 1
+use_debug_fission = false
+
+# There is no riscv64 AFDO profile, and without this the build stops on a missing
+# chrome/android/profiles/afdo.prof with no rule to make it.
+clang_use_default_sample_profile = false
+chrome_pgo_phase = 0
+
+is_chrome_branded = false
+use_official_google_api_keys = false
+android_channel = "stable"
+disable_fieldtrial_testing_config = true
+ffmpeg_branding = "Chrome"
+
+treat_warnings_as_errors = false
+
+# No Google build infrastructure here.
+use_remoteexec = false
+use_siso = false

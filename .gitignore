@@ -1,0 +1,5 @@
+# Created by 01-fetch.sh: the Chromium checkout and depot_tools, ~150 GB.
+/workspace/
+
+# Internal design notes, not part of the published recipe.
+/docs/superpowers/
