@@ -274,3 +274,22 @@ ordre. M142 et suivants les portent déjà, et le code a depuis déménagé dans
 - Rien n'est encore upstreamé. Les commits 4, 6 et 7 et les patchs 0002 et 0003
   pourraient l'être tels quels ; la changelist sandbox et `-mstrict-align` demandent
   du travail d'abord.
+
+## Licence
+
+Le contenu original de ce repo — la documentation, les scripts, la configuration gn
+et la glue AOSP — est sous Apache License 2.0. Voir [LICENSE](LICENSE).
+
+Les fichiers de `patches/` sont l'exception. Chacun est une œuvre dérivée du projet
+auquel il s'applique et reste sous les termes de ce projet, pas sous ceux de ce repo :
+
+| Patch | Projet upstream | Termes upstream |
+|---|---|---|
+| `0001-ffmpeg-support-android-riscv64.patch` | FFmpeg, et le `ffmpeg_generated.gni` de Chromium | LGPL-2.1-or-later, BSD-3-Clause |
+| `0002-swiftshader-default-to-llvm16.patch` | SwiftShader | Apache-2.0 |
+| `0003-cpuinfo-fix-hwprobe-cpu_set-type-on-bionic.patch` | cpuinfo | BSD-2-Clause |
+
+`aosp/webview/Android.bp` dérive d'AOSP et porte son propre en-tête Apache-2.0.
+
+L'APK que produit cette recette est un build de Chromium, couvert par le licensing
+propre à Chromium, qu'il n'appartient pas à ce repo d'accorder.

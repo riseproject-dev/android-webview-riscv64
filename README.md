@@ -266,3 +266,23 @@ M142 and newer already carry them, and the code has since moved to
   Neither is built by the WebView target, so neither affects the shipped APK.
 - Nothing here is upstreamed yet. Commits 4, 6 and 7 and patches 0002 and 0003 could
   go as they are; the sandbox changelist and `-mstrict-align` need work first.
+
+## License
+
+The original content of this repository — the documentation, the scripts, the gn
+configuration and the AOSP glue — is under the Apache License 2.0. See
+[LICENSE](LICENSE).
+
+The files under `patches/` are the exception. Each is a derivative work of the
+project it applies to and stays under that project's terms, not this repository's:
+
+| Patch | Upstream project | Upstream terms |
+|---|---|---|
+| `0001-ffmpeg-support-android-riscv64.patch` | FFmpeg, and Chromium's `ffmpeg_generated.gni` | LGPL-2.1-or-later, BSD-3-Clause |
+| `0002-swiftshader-default-to-llvm16.patch` | SwiftShader | Apache-2.0 |
+| `0003-cpuinfo-fix-hwprobe-cpu_set-type-on-bionic.patch` | cpuinfo | BSD-2-Clause |
+
+`aosp/webview/Android.bp` derives from AOSP and carries its own Apache-2.0 header.
+
+The APK this recipe produces is a build of Chromium, covered by Chromium's own
+licensing, which is not this repository's to grant.
