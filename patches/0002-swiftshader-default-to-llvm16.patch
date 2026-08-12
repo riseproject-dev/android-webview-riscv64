@@ -1,0 +1,46 @@
+From 79cd6421e752115f5f381f56ed7d83f798844030 Mon Sep 17 00:00:00 2001
+From: Levi Zim <rsworktech@outlook.com>
+Date: Sun, 28 Jan 2024 09:08:09 +0800
+Subject: [PATCH] Default to use llvm16
+
+Fuchsia would still use llvm10 due to missing third_party/llvm-16.0/configs/fuchsia
+
+Fix the following error when compiling chromium targeting riscv64 using llvm 10
+
+../../third_party/swiftshader/src/Reactor/LLVMJIT.cpp:796:83: error: no member named 'Create' in 'llvm::jitlink::InProcessMemoryManager'
+  796 |             , objectLayer(session, llvm::cantFail(llvm::jitlink::InProcessMemoryManager::Create()))
+      |                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+1 error generated
+
+Change-Id: I5aa2b77ee80cabb7ebe1641dcedea35a57b4933d
+
+Origin: https://swiftshader-review.googlesource.com/c/SwiftShader/+/75929
+patchset 2. Not merged upstream: as of the SwiftShader revision pinned by
+Chromium M151 (5b0479bd2d15), src/Reactor/BUILD.gn still defaults to
+llvm-10.0, and src/Reactor/LLVMJIT.cpp still forces
+USE_LEGACY_OBJECT_LINKING_LAYER to 0 on riscv, so the build still needs this.
+
+Applied to the third_party/swiftshader sub-repository, not to chromium/src.
+A gitlink move in chromium/src would not work: gclient resolves SwiftShader
+from DEPS and ignores the gitlink, and the resulting commit hash would not be
+reproducible for anyone else.
+---
+ src/Reactor/BUILD.gn | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/Reactor/BUILD.gn b/src/Reactor/BUILD.gn
+--- a/src/Reactor/BUILD.gn
++++ b/src/Reactor/BUILD.gn
+@@ -307,7 +307,11 @@ if (supports_subzero) {
+
+ if (supports_llvm) {
+   swiftshader_source_set("swiftshader_llvm_reactor") {
+-    llvm_dir = "../../third_party/llvm-10.0"
++    if (target_os != "fuchsia") {
++        llvm_dir = "../../third_party/llvm-16.0"
++    } else {
++        llvm_dir = "../../third_party/llvm-10.0"
++    }
+
+     deps = [
+       ":swiftshader_reactor_base",

@@ -15,11 +15,11 @@ Chromium fork (see [Where things live](#where-things-live)).
 
 | Item | State |
 |---|---|
-| Chromium 141.0.7366.3 (`refs/branch-heads/7366`) | **Verified on hardware** — SpacemiT K1 (X60), Android 17, `ro.vendor.api_level=202604`. Renders pages; renderer runs sandboxed (`Seccomp: 2`). |
-| Chromium 151.0.7922.108 (M151 stable) | **In progress.** The series is being rebased; not yet compiled, not yet run. |
-| Boards other than SpacemiT K1 | **Not tested.** The build is generic riscv64, but only the K1 has been booted. |
+| Chromium 151.0.7922.108 (M151 stable) — the pinned revision | **Verified on hardware** — SpacemiT K3, Android 17, `ro.vendor.api_level=202604`. Renders pages, renderer runs sandboxed. |
+| Chromium 141.0.7366.3 | Previously verified on a SpacemiT K1 (X60). Kept only as history; the M141 branch needs an extra ashmem backport, see [The Android 17 crash](#the-android-17-crash). |
+| Boards other than SpacemiT K1 / K3 | **Not tested.** The build is generic riscv64, but only those two have been booted. |
 | Cuttlefish (`aosp_cf_riscv64_phone`) | **Not tested.** |
-| riscv64 support upstream | **Not merged.** Two of the six commits are unmerged Gerrit changelists; the rest are local. |
+| riscv64 support upstream | **Not merged.** One of the seven commits is an unmerged Gerrit changelist, the rest are local. Three of them are straightforwardly upstreamable; see [The series](#the-series). |
 
 Do not read "verified" as "supported". This is a working recipe, not a product.
 
@@ -28,14 +28,25 @@ Do not read "verified" as "supported". This is a working recipe, not a product.
 The source changes are **commits on a fork**, not patch files:
 
 - **[BayLibre/chromium](https://github.com/BayLibre/chromium)**, branch
-  `spacemit-riscv64-m141` — the six riscv64 commits on top of the pinned upstream
-  revision. Reviewable, bisectable and rebasable with `git rebase --onto`.
+  `spacemit-riscv64-m151` — the seven riscv64 commits on top of the pinned
+  upstream revision. Reviewable, bisectable and rebasable with `git rebase --onto`.
 - **This repository** — the recipe: scripts, build configuration, AOSP glue,
-  documentation, and the one change the fork cannot carry (see below).
+  documentation, and the three changes the fork cannot carry (see below).
 
-`third_party/ffmpeg` is a separate git repository, so a `chromium/src` fork cannot
-contain its changes. They live here instead, in
-`patches/0001-ffmpeg-support-android-riscv64.patch`.
+`third_party/ffmpeg`, `third_party/swiftshader` and `third_party/cpuinfo/src` are
+separate git repositories, so a `chromium/src` fork cannot contain their changes.
+They live here instead, and `02-apply-series.sh` routes each one to the right
+repository:
+
+| Patch | Target repository |
+|---|---|
+| `0001-ffmpeg-support-android-riscv64.patch` | `third_party/ffmpeg` |
+| `0002-swiftshader-default-to-llvm16.patch` | `third_party/swiftshader` |
+| `0003-cpuinfo-fix-hwprobe-cpu_set-type-on-bionic.patch` | `third_party/cpuinfo/src` |
+
+A gitlink move in `chromium/src` is **not** an alternative for these: gclient
+resolves the sub-repositories from `DEPS` and ignores the gitlinks, and a locally
+created commit hash would not be reproducible for anyone else.
 
 ```
 scripts/config.sh      every pinned revision, in one place
@@ -67,27 +78,40 @@ Measured on the machine that produced the verified APK, not estimated:
 ```
 
 The result is `workspace/src/out/riscv64/apks/SystemWebView64.apk`
-(136,465,503 bytes for the verified build).
+(145,131,247 bytes for the verified build).
 
 `WORKSPACE=/path/to/somewhere` relocates the checkout. Everything else is pinned in
 `scripts/config.sh` — change revisions there and nowhere else.
 
-One ordering constraint: **re-running `gclient sync` reverts the SwiftShader and
-ffmpeg steps**, because both live in sub-repositories that gclient owns. Re-run
-`02-apply-series.sh` after any sync.
+Three things that will bite you otherwise:
+
+- **`02-apply-series.sh` needs the fork branch to exist on the remote.** It fetches
+  `$SERIES_BRANCH` from `$SERIES_REMOTE`; there is no offline path.
+- **Re-running `gclient sync` reverts all three sub-repository patches**, because
+  gclient owns those directories. Re-run `02-apply-series.sh` after any sync.
+- **`gclient sync` refuses to run at all if a sub-repository is dirty**, which it
+  will be once the patches are applied:
+
+  ```
+  ____ src/third_party/ffmpeg at <rev>
+      You have uncommitted changes.
+  ```
+
+  `git -C src/third_party/ffmpeg stash push -u` before syncing, then re-apply.
 
 ## The series
 
 | # | Commit | Origin |
 |---|---|---|
 | 1 | `sandbox: Add support for riscv64-linux` | [crrev.com/c/4935120](https://chromium-review.googlesource.com/c/chromium/src/+/4935120) PS11, by Andreas Schwab. Not merged. |
-| 2 | `swiftshader: roll to a revision that defaults to LLVM 16` | [SwiftShader CL 75929](https://swiftshader-review.googlesource.com/c/SwiftShader/+/75929) PS2, by Levi Zim. Not merged. |
-| 3 | `build/config: riscv64: build with -mstrict-align` | local |
-| 4 | `android: do not apply the 32-bit version code offset on riscv64` | local |
-| 5 | `cpuinfo: enable the riscv linux sources on android` | local, upstreamable as is |
-| 6 | `ffmpeg: support the android-riscv64 build` | local (companion patch in `patches/`) |
+| 2 | `build/config: riscv64: build with -mstrict-align` | local |
+| 3 | `android: do not apply the 32-bit version code offset on riscv64` | local |
+| 4 | `cpuinfo: enable the riscv linux sources on android` | local, upstreamable as is |
+| 5 | `ffmpeg: support the android-riscv64 build` | local (companion patch in `patches/`) |
+| 6 | `blink: fix SimdEqualIgnoringAsciiCase tag types for scalable vectors` | local, upstreamable as is |
+| 7 | `skia: link the NDK ICU stub when building against API 31 or newer` | local, upstreamable as is |
 
-Two of them deserve explanation.
+Four of them deserve explanation.
 
 **Commit 1 is not optional, in either direction.** Without it riscv64 does not
 build: `sandbox/linux/bpf_dsl/seccomp_macros.h` ends its architecture chain with
@@ -95,7 +119,7 @@ build: `sandbox/linux/bpf_dsl/seccomp_macros.h` ends its architecture chain with
 It is not dead weight at runtime either — the WebView renderer really does run with
 `SECCOMP_MODE_FILTER`, so the policy has to know the riscv64 syscall numbering.
 
-**Commit 3 exists because of a SIGBUS, not a preference.** The SpacemiT X60 traps on
+**Commit 2 exists because of a SIGBUS, not a preference.** The SpacemiT X60 traps on
 misaligned vector accesses: `hwprobe` reports vector-misaligned as UNSUPPORTED, and
 the kernel's misaligned handler emulates only unit-stride `vle`/`vse`, never strided
 `vlse`. Without `-mstrict-align` the autovectorizer emits a strided `vlse64.v` with
@@ -103,6 +127,30 @@ misaligned elements (in `ui::GestureDetector`, among others) and WebView dies wi
 `SIGBUS`/`BUS_ADRALN` on the first `loadUrl`. Note the cost: the flag applies to
 **every** riscv64 build, so hardware with working misaligned vector support pays for
 alignment it does not need. There is no opt-out gn argument yet.
+
+**Commits 6 and 7 are upstream bugs that only riscv64 reaches.** Neither is a
+porting hack; both are the kind of fix that would be accepted upstream as is.
+
+Commit 6: `SimdEqualIgnoringAsciiCase()` builds an independent
+`FixedTag<uint8_t, 8>` and promotes it to `FixedTag<uint16_t, 8>`. On a
+scalable-vector target such as RVV, Highway's `PromoteTo` expects
+`VFromD<Rebind<uint8_t, D>>`, whose LMUL is half, so overload resolution fails.
+The two descriptors coincide only on fixed-width targets, which is why nobody had
+noticed. `Rebind` is what the Highway API intends here.
+
+Commit 7 is a chain that starts and ends with riscv64:
+
+```
+riscv64  ->  build/config/android/config.gni pins android_ndk_api_level = 36
+         ->  __ANDROID_API__ >= 31 inside Skia
+         ->  SkFontMgr_android_ndk.cpp stops dlsym'ing libicu.so and references
+             u_strFoldCase / u_strFromUTF8 / u_strToUTF8 directly
+         ->  three undefined symbols at link, nothing links the NDK ICU stub
+```
+
+Every other architecture compiles against Chromium's much lower min sdk and
+therefore never leaves the dlsym path. The fix links the NDK ICU stub, gated on
+`android_ndk_api_level >= 31` so it stays correct everywhere.
 
 ## Build configuration
 
@@ -207,12 +255,14 @@ M142 and newer already carry them, and the code has since moved to
 
 ## Known gaps
 
-- The M151 rebase is unfinished; the pin in `config.sh` is the M141 revision that was
-  actually verified.
 - `-mstrict-align` is unconditional. A `riscv_strict_align` gn argument would let
   non-SpacemiT hardware opt out, but it does not exist yet.
+- The APK has been exercised by loading pages in the WebView shell and by checking
+  that the sandboxed renderer starts. That is not a test suite: nothing here runs
+  the Chromium or WebView CTS.
 - Two test-only pieces of the sandbox changelist are not carried:
   `syscall_parameters_restrictions_unittest.cc` no longer exists upstream, and the
   riscv branch of `syscall_unittest.cc` (an ECALL opcode assertion) is missing.
   Neither is built by the WebView target, so neither affects the shipped APK.
-- Nothing here is upstreamed. Commit 5 could be as is; the rest need work.
+- Nothing here is upstreamed yet. Commits 4, 6 and 7 and patches 0002 and 0003 could
+  go as they are; the sandbox changelist and `-mstrict-align` need work first.

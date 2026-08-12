@@ -1,0 +1,43 @@
+Subject: [PATCH] riscv: fix the hwprobe cpu_set argument type on bionic
+
+cpuinfo_riscv_linux_decode_vendor_uarch_from_hwprobe() casts its cpu_set_t*
+to unsigned long* before calling __riscv_hwprobe(). That matches the glibc
+signature, but the whole C-library hwprobe path is guarded by #ifdef
+__ANDROID__, and bionic declares:
+
+  int __riscv_hwprobe(struct riscv_hwprobe* _Nonnull, size_t, size_t,
+                      cpu_set_t* _Nullable, unsigned);
+
+so the cast introduces the very mismatch it looks like it should prevent.
+cpu_set already has the right type, coming straight from CPU_ALLOC().
+
+Nobody had compiled this before: Chromium only built cpuinfo's riscv/linux
+sources for is_linux || is_chromeos, so the Android-only branch was dead code
+until android riscv64 was enabled. With Chromium M151's clang,
+-Wincompatible-pointer-types is an error rather than a warning, and the build
+fails with:
+
+  riscv-hw.c:145:62: error: incompatible pointer types passing
+  'unsigned long *' to parameter of type 'cpu_set_t * _Nullable'
+
+Applied to the third_party/cpuinfo/src sub-repository (a separate DEPS
+repository), not to chromium/src. Upstreamable to pytorch/cpuinfo as is.
+
+Against cpuinfo revision ea6b9f1bb6e1, the one Chromium M151 pins.
+---
+ src/riscv/linux/riscv-hw.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/riscv/linux/riscv-hw.c b/src/riscv/linux/riscv-hw.c
+index f67dc46bed34..75542e208786 100644
+--- a/src/riscv/linux/riscv-hw.c
++++ b/src/riscv/linux/riscv-hw.c
+@@ -142,7 +142,7 @@ void cpuinfo_riscv_linux_decode_vendor_uarch_from_hwprobe(
+ 	 */
+ 	int ret = syscall(NR_riscv_hwprobe, pairs, pairs_count, cpu_set_size, cpu_set, 0 /* flags */);
+ #else
+-	int ret = __riscv_hwprobe(pairs, pairs_count, cpu_set_size, (unsigned long*)cpu_set, 0 /* flags */);
++	int ret = __riscv_hwprobe(pairs, pairs_count, cpu_set_size, cpu_set, 0 /* flags */);
+ #endif
+ 	if (ret < 0) {
+ 		cpuinfo_log_warning("failed to get hwprobe information, err: %d", ret);
