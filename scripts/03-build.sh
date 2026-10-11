@@ -17,6 +17,7 @@ export PATH="$WORKSPACE/depot_tools:$PATH"
 # _pb2.py files expect, and compile_resources dies with "Descriptors cannot not be
 # created directly". Ignoring user site-packages is enough; nothing needs removing.
 export PYTHONNOUSERSITE=1
+export GOCACHE="${GOCACHE:-$WORKSPACE/.cache/go-build}"
 
 mkdir -p "$OUT_DIR"
 cp "$REPO_ROOT/args.gn" "$OUT_DIR/args.gn"
