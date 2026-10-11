@@ -9,16 +9,35 @@ no WebView provider at all: every app that embeds a `WebView` fails to start. Th
 repository carries the recipe; the source changes themselves live as commits on a
 Chromium fork (see [Where things live](#where-things-live)).
 
-*Une version française de ce document est disponible : [README.fr.md](README.fr.md).*
+The RISE recipe lives in
+[`riseproject-dev/android-webview-riscv64`](https://github.com/riseproject-dev/android-webview-riscv64).
+Its source series lives in
+[`riseproject-dev/chromium`](https://github.com/riseproject-dev/chromium), branch
+`riscv-m151`, pinned at
+`0139499e9c33d18e27a0499ead341ca649f069e2`.
+Both repositories are private and require GitHub access over SSH. The base
+Chromium checkout and the seven-commit RISC-V series are fetched from
+`git@github.com:riseproject-dev/chromium.git`. The RISE repositories must contain
+the imported branches before the recipe can fetch them. No BayLibre repository
+is needed to build the APK. `depot_tools` and dependencies selected by `DEPS`
+come from their public upstreams.
+
+When reusing a workspace, `01-fetch.sh` aligns the Chromium `origin` and
+`.gclient` with this RISE URL. A changed `.gclient` is preserved in
+`.gclient.before-rise.*` before it is replaced.
+
+K3 and A210 use the same `target_cpu = "riscv64"` build. The RISE delivery
+branch `riscv-m151` carries the original commits from
+`spacemit-riscv64-m151`. The recipe creates a normal Chromium build checkout
+in `workspace/src`.
 
 ## Status
 
 | Item | State |
 |---|---|
-| Chromium 151.0.7922.108 (M151 stable) — the pinned revision | **Verified on hardware** — SpacemiT K3, Android 17, `ro.vendor.api_level=202604`. Renders pages, renderer runs sandboxed. |
-| Chromium 141.0.7366.3 | Previously verified on a SpacemiT K1 (X60). Kept only as history; the M141 branch needs an extra ashmem backport, see [The Android 17 crash](#the-android-17-crash). |
-| Boards other than SpacemiT K1 / K3 | **Not tested.** The build is generic riscv64, but only those two have been booted. |
-| Cuttlefish (`aosp_cf_riscv64_phone`) | **Not tested.** |
+| Chromium 151.0.7922.108 (M151 stable) — the pinned revision | Source-project report: tested on SpacemiT K3 with Android 17 and `ro.vendor.api_level=202604`; pages render and the renderer is sandboxed. Rebuilding and testing the RISE recipe are pending. |
+| RISE SpacemiT K3 | Uses the shared riscv64 M151 APK. RISE Android image and WebView runtime validation are pending. |
+| RISE Alibaba A210 | Uses the same APK. The prebuilt's riscv64 ELF headers were checked; A210 runtime validation is pending. |
 | riscv64 support upstream | **Not merged.** One of the seven commits is an unmerged Gerrit changelist, the rest are local. Three of them are straightforwardly upstreamable; see [The series](#the-series). |
 
 Do not read "verified" as "supported". This is a working recipe, not a product.
@@ -27,8 +46,8 @@ Do not read "verified" as "supported". This is a working recipe, not a product.
 
 The source changes are **commits on a fork**, not patch files:
 
-- **[BayLibre/chromium](https://github.com/BayLibre/chromium)**, branch
-  `spacemit-riscv64-m151` — the seven riscv64 commits on top of the pinned
+- **`chromium`**, branch
+  `riscv-m151` — the seven riscv64 commits on top of the pinned
   upstream revision. Reviewable, bisectable and rebasable with `git rebase --onto`.
 - **This repository** — the recipe: scripts, build configuration, AOSP glue,
   documentation, and the three changes the fork cannot carry (see below).
@@ -70,11 +89,14 @@ Measured on the machine that produced the verified APK, not estimated:
 
 ## Build it
 
+```sh
+git clone -b android-17 git@github.com:riseproject-dev/android-webview-riscv64.git android-webview-riscv64
 ```
-./scripts/01-fetch.sh
-./scripts/02-apply-series.sh
-./scripts/03-build.sh
-./scripts/04-verify-apk.sh
+
+Run from the recipe checkout:
+
+```sh
+./scripts/01-fetch.sh && ./scripts/02-apply-series.sh && ./scripts/03-build.sh && ./scripts/04-verify-apk.sh
 ```
 
 The result is `workspace/src/out/riscv64/apks/SystemWebView64.apk`
@@ -173,6 +195,12 @@ somewhere else:
 RBE) round out the non-defaults.
 
 ## Integrating into an AOSP tree
+
+The RISE Android manifest already includes the `webview_riscv64` module for
+both K3 and A210. Replace its APK at
+`aosp/device/rise/spacemit/common/webview/SystemWebView64.apk`, then rebuild
+each Android product. Keep the existing `Android.bp`; the APK is tracked by
+Git LFS. Its shared location does not imply hardware validation on A210.
 
 Copy `aosp/webview/Android.bp` and the APK into your device tree, then add
 `PRODUCT_PACKAGES += webview_riscv64` from `aosp/device-common.mk.snippet`.

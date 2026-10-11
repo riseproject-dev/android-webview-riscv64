@@ -1,6 +1,4 @@
 # gn arguments for the riscv64 SystemWebView build.
-# This is the exact configuration that produced the APK verified on a SpacemiT K1
-# running Android 17.
 
 target_os = "android"
 target_cpu = "riscv64"
