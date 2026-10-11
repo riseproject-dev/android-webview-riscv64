@@ -6,30 +6,30 @@ integrate it into an AOSP tree.
 Chromium has no official riscv64 Android target. AOSP's `external/chromium-webview`
 ships prebuilts for arm, arm64, x86 and x86_64 only, so a riscv64 Android image has
 no WebView provider at all: every app that embeds a `WebView` fails to start. This
-repository carries the recipe; the source changes themselves live as commits on a
-Chromium fork (see [Where things live](#where-things-live)).
+repository carries the recipe and the original RISC-V commits as a patch series
+(see [Where things live](#where-things-live)).
 
 The RISE recipe lives in
 [`riseproject-dev/android-webview-riscv64`](https://github.com/riseproject-dev/android-webview-riscv64).
-Its source series lives in
-[`riseproject-dev/chromium`](https://github.com/riseproject-dev/chromium), branch
-`riscv-m151`, pinned at
-`0139499e9c33d18e27a0499ead341ca649f069e2`.
-Both repositories are private and require GitHub access over SSH. The base
-Chromium checkout and the seven-commit RISC-V series are fetched from
-`git@github.com:riseproject-dev/chromium.git`. The RISE repositories must contain
-the imported branches before the recipe can fetch them. No BayLibre repository
-is needed to build the APK. `depot_tools` and dependencies selected by `DEPS`
-come from their public upstreams.
+This private repository requires GitHub access over SSH. Chromium is fetched
+directly from its official
+[`chromium/src`](https://chromium.googlesource.com/chromium/src/) repository at
+`4744b886309d987d292e43232776d2206cccb13d` (tag `151.0.7922.108`). The seven
+RISC-V commits are bundled in `patches/chromium/`. Their original authors,
+author dates, committers, committer dates, messages and signoffs are preserved;
+the recipe reconstructs their original tip
+`0139499e9c33d18e27a0499ead341ca649f069e2` and verifies every commit SHA.
+The RISE recipe contains every local source change needed for the APK.
+`depot_tools` and dependencies selected by `DEPS` come from their public upstreams.
 
 When reusing a workspace, `01-fetch.sh` aligns the Chromium `origin` and
-`.gclient` with this RISE URL. A changed `.gclient` is preserved in
+`.gclient` with the official Chromium URL. A changed `.gclient` is preserved in
 `.gclient.before-rise.*` before it is replaced.
 
-K3 and A210 use the same `target_cpu = "riscv64"` build. The RISE delivery
-branch `riscv-m151` carries the original commits from
-`spacemit-riscv64-m151`. The recipe creates a normal Chromium build checkout
-in `workspace/src`.
+K3 and A210 use the same `target_cpu = "riscv64"` build. The bundled series
+preserves the original commits from `spacemit-riscv64-m151`. The recipe creates
+a normal Chromium build checkout in `workspace/src`; maintaining or importing
+a separate Chromium fork at RISE is optional.
 
 ## Status
 
@@ -44,18 +44,19 @@ Do not read "verified" as "supported". This is a working recipe, not a product.
 
 ## Where things live
 
-The source changes are **commits on a fork**, not patch files:
+The complete recipe and patch series live in this repository:
 
-- **`chromium`**, branch
-  `riscv-m151` — the seven riscv64 commits on top of the pinned
-  upstream revision. Reviewable, bisectable and rebasable with `git rebase --onto`.
-- **This repository** — the recipe: scripts, build configuration, AOSP glue,
-  documentation, and the three changes the fork cannot carry (see below).
+- **`patches/chromium/`** — seven original commits on top of the pinned official
+  revision, exported with `git format-patch`, plus `series.json` containing
+  their original metadata and patch checksums. `git am` restores their original
+  history in the build checkout; each commit remains reviewable and bisectable.
+- **`patches/`** — three changes to separate dependency repositories.
+- **Scripts and configuration** — the pinned inputs, build, APK verification
+  and AOSP integration glue.
 
 `third_party/ffmpeg`, `third_party/swiftshader` and `third_party/cpuinfo/src` are
-separate git repositories, so a `chromium/src` fork cannot contain their changes.
-They live here instead, and `02-apply-series.sh` routes each one to the right
-repository:
+separate git repositories. `02-apply-series.sh` routes their patches to the
+right repositories:
 
 | Patch | Target repository |
 |---|---|
@@ -70,12 +71,14 @@ created commit hash would not be reproducible for anyone else.
 ```
 scripts/config.sh      every pinned revision, in one place
 scripts/01-fetch.sh    workspace + Chromium checkout at the pin
-scripts/02-apply-series.sh   the fork branch, SwiftShader, and the ffmpeg patch
+scripts/02-apply-series.sh   the bundled Chromium and dependency patch series
+scripts/apply-chromium-series.py   restore and verify the original commit SHAs
 scripts/03-build.sh    gn gen + ninja
 scripts/04-verify-apk.sh     check the APK without a device
 args.gn                the gn configuration that produced the verified APK
 aosp/                  the device-tree glue (Android.bp, makefile snippet)
-patches/               changes that belong to a repository other than chromium/src
+patches/chromium/      the seven Chromium commits and their metadata
+patches/               ffmpeg, SwiftShader and cpuinfo dependency changes
 ```
 
 ## Host requirements
@@ -107,8 +110,10 @@ The result is `workspace/src/out/riscv64/apks/SystemWebView64.apk`
 
 Three things that will bite you otherwise:
 
-- **`02-apply-series.sh` needs the fork branch to exist on the remote.** It fetches
-  `$SERIES_BRANCH` from `$SERIES_REMOTE`; there is no offline path.
+- **`02-apply-series.sh` uses the bundled patches without fetching a fork.** It
+  accepts the pinned base or a partially replayed series, verifies the patch
+  checksums and every reconstructed commit, and skips dependency patches already
+  applied. A failed replay remains available for inspection.
 - **Re-running `gclient sync` reverts all three sub-repository patches**, because
   gclient owns those directories. Re-run `02-apply-series.sh` after any sync.
 - **`gclient sync` refuses to run at all if a sub-repository is dirty**, which it
@@ -198,7 +203,7 @@ RBE) round out the non-defaults.
 
 The RISE Android manifest already includes the `webview_riscv64` module for
 both K3 and A210. Replace its APK at
-`aosp/device/rise/spacemit/common/webview/SystemWebView64.apk`, then rebuild
+`aosp/device/rise/common/webview/SystemWebView64.apk`, then rebuild
 each Android product. Keep the existing `Android.bp`; the APK is tracked by
 Git LFS. Its shared location does not imply hardware validation on A210.
 

@@ -1,0 +1,57 @@
+From 0139499e9c33d18e27a0499ead341ca649f069e2 Mon Sep 17 00:00:00 2001
+From: Guillaume La Roque <glaroque@baylibre.com>
+Date: Wed, 12 Aug 2026 01:05:38 +0200
+Subject: [PATCH 7/7] skia: link the NDK ICU stub when building against API 31
+ or newer
+
+SkFontMgr_android_ndk.cpp reaches u_strFoldCase, u_strFromUTF8 and
+u_strToUTF8 two different ways: it dlsym's them out of libicu.so below API
+31, and references them directly from API 31 on. Nothing links the NDK ICU
+stub, so the direct path leaves three undefined symbols in
+libwebviewchromium.so:
+
+  ld.lld: error: undefined symbol: u_strFoldCase
+  >>> referenced by SkFontMgr_android_ndk.cpp:178
+
+Only riscv64 reaches that path today. build/config/android/config.gni pins
+android_ndk_api_level to 36 for riscv64 -- 'Android did not support RISC-V64
+before API 36' -- while every other architecture compiles against Chromium's
+much lower min sdk and therefore always takes the dlsym path.
+
+Signed-off-by: Guillaume La Roque <glaroque@baylibre.com>
+---
+ skia/BUILD.gn | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/skia/BUILD.gn b/skia/BUILD.gn
+index 8f1417a941c49714cc0ebe78fb738cfbf93b1ad2..dc52d7f3ee4b101a971cf9c18fca0eceb21b2001 100644
+--- a/skia/BUILD.gn
++++ b/skia/BUILD.gn
+@@ -18,6 +18,10 @@ import("//third_party/skia/modules/pathops/pathops.gni")
+ import("//third_party/skia/modules/skcms/skcms.gni")
+ import("features.gni")
+ 
++if (is_android) {
++  import("//build/config/android/config.gni")
++}
++
+ if (current_cpu == "arm") {
+   import("//build/config/arm.gni")
+ }
+@@ -467,6 +471,16 @@ component("skia") {
+     # Note that this requires expat.
+     # Note that this requires skia_ports_fontmgr_android_parser_sources.
+     sources += skia_ports_fontmgr_android_ndk_sources
++
++    if (android_ndk_api_level >= 31) {
++      # From API 31 on, SkFontMgr_android_ndk.cpp references u_strFoldCase,
++      # u_strFromUTF8 and u_strToUTF8 directly rather than dlsym'ing them out of
++      # libicu.so, so the NDK ICU stub has to be linked or the shared library
++      # fails with three undefined symbols. riscv64 always lands here:
++      # build/config/android/config.gni pins android_ndk_api_level to 36,
++      # because Android has no RISC-V64 support before API 36.
++      libs = [ "icu" ]
++    }
+   }
+ 
+   if (is_fuchsia) {

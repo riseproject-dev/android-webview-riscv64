@@ -1,0 +1,27 @@
+From 252986b6e6875fd150070551ef515fee58fcc09f Mon Sep 17 00:00:00 2001
+From: Guillaume La Roque <glaroque@baylibre.com>
+Date: Tue, 11 Aug 2026 22:32:42 +0200
+Subject: [PATCH 4/7] cpuinfo: enable the riscv linux sources on android
+
+riscv/linux/init.c and riscv-hw.c were gated on is_linux || is_chromeos,
+so an android riscv64 build compiled no cpuinfo backend at all. Android
+uses the same Linux hwprobe and /proc interfaces. Upstreamable as is.
+
+Signed-off-by: Guillaume La Roque <glaroque@baylibre.com>
+---
+ third_party/cpuinfo/BUILD.gn | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/third_party/cpuinfo/BUILD.gn b/third_party/cpuinfo/BUILD.gn
+index 1fd7f0fa7bb6adbf98f702a869e2c9a4355ae088..363c204e1e9c7912d45e50438a59f42c5824d79e 100644
+--- a/third_party/cpuinfo/BUILD.gn
++++ b/third_party/cpuinfo/BUILD.gn
+@@ -203,7 +203,7 @@ source_set("cpu_and_os_specific") {
+     ]
+   }
+ 
+-  if ((is_linux || is_chromeos) && current_cpu == "riscv64") {
++  if ((is_linux || is_chromeos || is_android) && current_cpu == "riscv64") {
+     sources = [
+       "src/src/riscv/linux/init.c",
+       "src/src/riscv/linux/riscv-hw.c",

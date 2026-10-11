@@ -52,14 +52,14 @@ fi
 git -C src remote set-url origin "$CHROMIUM_REMOTE"
 
 # Fetching the pinned commit directly keeps the clone small. Not every server
-# allows a fetch by SHA, so fall back to the RISE branch containing it.
+# allows a fetch by SHA, so fall back to the official release tag.
 if ! git -C src fetch --depth 1 origin "$CHROMIUM_COMMIT" 2>/dev/null; then
 	echo "fetch by SHA refused, falling back to $CHROMIUM_FETCH_REF" >&2
-	git -C src fetch origin "$CHROMIUM_FETCH_REF"
+	git -C src fetch --depth 1 origin "$CHROMIUM_FETCH_REF"
 fi
 git -C src checkout --detach "$CHROMIUM_COMMIT"
 
-gclient sync -D
+gclient sync
 
 echo
 echo "workspace ready: $WORKSPACE"

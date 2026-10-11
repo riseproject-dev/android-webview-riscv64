@@ -1,0 +1,41 @@
+From 2fa1bf90b641aeba5c5143d1d4c22c0f27f21150 Mon Sep 17 00:00:00 2001
+From: Guillaume La Roque <glaroque@baylibre.com>
+Date: Tue, 11 Aug 2026 22:32:40 +0200
+Subject: [PATCH 2/7] build/config: riscv64: build with -mstrict-align
+
+The SpacemiT X60 traps on misaligned vector accesses, and the kernel
+misaligned handler emulates only unit-stride vle/vse, not the strided
+vlse the autovectorizer emits. WebView died with SIGBUS/BUS_ADRALN on
+the first loadUrl before this. The rationale is kept next to the flag.
+
+Note that this applies to every riscv64 build, not only SpacemiT parts;
+hardware with working misaligned vector support pays for alignment it
+does not need.
+
+Signed-off-by: Guillaume La Roque <glaroque@baylibre.com>
+---
+ build/config/compiler_cpu_abi.gn | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/build/config/compiler_cpu_abi.gn b/build/config/compiler_cpu_abi.gn
+index ae62bab587e7dd1727cc44550d9fad42a23cf3ce..8402cbb21f8fbf2e8e4345e7db91b3720cd8c95f 100644
+--- a/build/config/compiler_cpu_abi.gn
++++ b/build/config/compiler_cpu_abi.gn
+@@ -345,7 +345,16 @@ if ((is_posix && !is_apple) || is_fuchsia) {
+       cpu_abi_cflags += [ "--target=riscv64-linux-gnu" ]
+       cpu_abi_ldflags += [ "--target=riscv64-linux-gnu" ]
+     }
+-    cpu_abi_cflags += [ "-mabi=lp64d" ]
++    cpu_abi_cflags += [
++      "-mabi=lp64d",
++
++      # The SpacemiT X60 traps on misaligned vector accesses (hwprobe reports
++      # vector-misaligned UNSUPPORTED, and the kernel only emulates unit-stride
++      # vle/vse, not strided vlse). Without this the autovectorizer emits a
++      # strided vlse64.v with misaligned elements (e.g. in ui::GestureDetector),
++      # which faults with SIGBUS/BUS_ADRALN in WebView. Force aligned codegen.
++      "-mstrict-align",
++    ]
+   } else if (current_cpu == "loong64") {
+     if (is_clang) {
+       cpu_abi_cflags += [ "--target=loongarch64-linux-gnu" ]

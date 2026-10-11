@@ -1,0 +1,46 @@
+From 0aeb30016f77e30c2b8b3be8fd1df1b28751ab6f Mon Sep 17 00:00:00 2001
+From: Guillaume La Roque <glaroque@baylibre.com>
+Date: Tue, 11 Aug 2026 22:32:43 +0200
+Subject: [PATCH 5/7] ffmpeg: support the android-riscv64 build
+
+Add riscv64 to the android entry of ARCH_MAP and teach
+SetupAndroidToolchain about it. API 35 is the first NDK level with a
+riscv64 sysroot, so the toolchain level is pinned there rather than
+following api64_level.
+
+The companion changes live in the third_party/ffmpeg repository and are
+therefore not part of this commit: ffmpeg_generated.gni, and the
+generated configuration under
+chromium/config/Chrome/android/riscv64/ (10 files). That directory must
+be present for the build to succeed -- this script only makes generating
+it possible.
+
+Signed-off-by: Guillaume La Roque <glaroque@baylibre.com>
+---
+ media/ffmpeg/scripts/build_ffmpeg.py | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/media/ffmpeg/scripts/build_ffmpeg.py b/media/ffmpeg/scripts/build_ffmpeg.py
+index fa22c573e0fe8624f4339c9219561d33d0111474..ad03a0dc1b578c3b6d4f16f7a3823737bf9ae5bb 100755
+--- a/media/ffmpeg/scripts/build_ffmpeg.py
++++ b/media/ffmpeg/scripts/build_ffmpeg.py
+@@ -41,7 +41,7 @@ BRANDINGS = [
+ ]
+ 
+ ARCH_MAP = {
+-    'android': ['ia32', 'x64', 'arm-neon', 'arm64'],
++    'android': ['ia32', 'x64', 'arm-neon', 'arm64', 'riscv64'],
+     'linux': ['ia32', 'x64', 'noasm-x64', 'arm-neon', 'arm64', 'riscv64'],
+     'mac': ['x64', 'arm64'],
+     'win': ['ia32', 'x64', 'arm64'],
+@@ -234,6 +234,10 @@ def SetupAndroidToolchain(target_arch):
+     elif target_arch == 'mips64el':  # Unsupported beginning in M90
+         toolchain_level = api64_level
+         toolchain_bin_prefix = 'mips64el-linux-android'
++    elif target_arch == 'riscv64':
++        # riscv64 only exists starting at API 35 in the NDK sysroot.
++        toolchain_level = '35'
++        toolchain_bin_prefix = 'riscv64-linux-android'
+ 
+     clang_toolchain_dir = NDK_ROOT_DIR + '/toolchains/llvm/prebuilt/linux-x86_64/'
+ 

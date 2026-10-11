@@ -1,0 +1,39 @@
+From 38b415217f2f9defa613cdddad05fdce6e652bb6 Mon Sep 17 00:00:00 2001
+From: Guillaume La Roque <glaroque@baylibre.com>
+Date: Tue, 11 Aug 2026 23:32:54 +0200
+Subject: [PATCH 6/7] blink: fix SimdEqualIgnoringAsciiCase tag types for
+ scalable vectors
+
+SimdEqualIgnoringAsciiCase() builds its 8-bit descriptor as an independent
+FixedTag<uint8_t, 8> and promotes it to FixedTag<uint16_t, 8>. On fixed-width
+targets the two descriptors agree, but on a scalable-vector target such as
+RVV, PromoteTo expects VFromD<Rebind<uint8_t, D>>, whose LMUL is half of
+FixedTag<uint8_t, 8>'s, so overload resolution fails:
+
+  string_impl.h:815: error: no matching function for call to 'PromoteTo'
+
+Rebind is what the Highway API intends here and is correct on every target.
+Upstreamable as is -- this code has simply never been compiled for RVV, since
+upstream does not build Chromium for android riscv64.
+
+Signed-off-by: Guillaume La Roque <glaroque@baylibre.com>
+---
+ third_party/blink/renderer/platform/wtf/text/string_impl.h | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/third_party/blink/renderer/platform/wtf/text/string_impl.h b/third_party/blink/renderer/platform/wtf/text/string_impl.h
+index 3ce563f7e6a2ab614e5c197567aa97a545a7e4f2..9791265d02be09683c1b827ed6777e7661a6f508 100644
+--- a/third_party/blink/renderer/platform/wtf/text/string_impl.h
++++ b/third_party/blink/renderer/platform/wtf/text/string_impl.h
+@@ -797,7 +797,10 @@ ALWAYS_INLINE bool SimdEqualIgnoringAsciiCase(base::span<const UChar> a,
+                                               base::span<const LChar> b) {
+   namespace hw = hwy::HWY_NAMESPACE;
+   constexpr hw::FixedTag<uint16_t, 8> d16;
+-  constexpr hw::FixedTag<uint8_t, 8> d8;
++  // Rebind rather than an independent FixedTag: on scalable-vector targets such
++  // as RVV, PromoteTo expects VFromD<Rebind<uint8_t, D>>, whose LMUL is half of
++  // FixedTag<uint8_t, 8>'s. The two coincide only on fixed-width targets.
++  constexpr hw::Rebind<uint8_t, decltype(d16)> d8;
+   HWY_LANES_CONSTEXPR size_t kLanes = hw::Lanes(d16);
+ 
+   // SAFETY: The SIMD code requires raw buffer access.

@@ -1,0 +1,28 @@
+From 52531d07095983ac020e6ccfbc4cdad26623ee92 Mon Sep 17 00:00:00 2001
+From: Guillaume La Roque <glaroque@baylibre.com>
+Date: Tue, 11 Aug 2026 22:32:41 +0200
+Subject: [PATCH 3/7] android: do not apply the 32-bit version code offset on
+ riscv64
+
+The offset exists for 64-bit targets that ship a paired 32-bit secondary
+ABI. riscv64 has no secondary ABI, so applying it produces a version code
+from the wrong range.
+
+Signed-off-by: Guillaume La Roque <glaroque@baylibre.com>
+---
+ chrome/android/modules/chrome_bundle_tmpl.gni | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/chrome/android/modules/chrome_bundle_tmpl.gni b/chrome/android/modules/chrome_bundle_tmpl.gni
+index 470d87b2d56a2160b5cae7f59ea62db43ebae7b9..becabb18b9eb08a2df84b7bda7b44372a184bb86 100644
+--- a/chrome/android/modules/chrome_bundle_tmpl.gni
++++ b/chrome/android/modules/chrome_bundle_tmpl.gni
+@@ -141,7 +141,7 @@ template("chrome_bundle") {
+         parent_module_target = ":${_bundle_target_name}__chrome_bundle_module"
+       }
+ 
+-      if (android_64bit_target_cpu) {
++      if (android_64bit_target_cpu && target_cpu != "riscv64") {
+         _version_code_offset = chrome_32_version_code
+       } else {
+         _version_code_offset = chrome_version_code
