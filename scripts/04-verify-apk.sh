@@ -41,10 +41,13 @@ case "$machine" in
 *) die "libwebviewchromium.so is not RISC-V: $machine" ;;
 esac
 
-# Package identity, when aapt2 is around. targetSdkVersion is not cosmetic: it is
-# the floor WebViewUpdateService enforces before it will accept a provider.
-if command -v aapt2 >/dev/null 2>&1; then
-	badging="$(aapt2 dump badging "$APK")"
+# Prefer the tool fetched by Chromium so package checks need no host SDK.
+AAPT2="$WORKSPACE/src/third_party/android_build_tools/aapt2/cipd/aapt2"
+if [ ! -x "$AAPT2" ]; then
+	AAPT2="$(command -v aapt2 || true)"
+fi
+if [ -n "$AAPT2" ]; then
+	badging="$("$AAPT2" dump badging "$APK")"
 	pkg="$(printf '%s\n' "$badging" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
 	ver="$(printf '%s\n' "$badging" | sed -n "s/^package:.*versionName='\([^']*\)'.*/\1/p")"
 	tsdk="$(printf '%s\n' "$badging" | sed -n "s/^targetSdkVersion:'\([^']*\)'/\1/p")"
@@ -63,7 +66,7 @@ if command -v aapt2 >/dev/null 2>&1; then
 		die "targetSdkVersion $tsdk is below the WebViewUpdateService floor of 33"
 	fi
 else
-	echo "aapt2 not found, skipping package identity checks"
+	die "aapt2 not found; run 01-fetch.sh or install it on PATH"
 fi
 
 # The APK and the .so can keep byte-identical sizes across a real code change,
