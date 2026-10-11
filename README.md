@@ -35,9 +35,9 @@ a separate Chromium fork at RISE is optional.
 
 | Item | State |
 |---|---|
-| Chromium 151.0.7922.108 (M151) — the pinned revision | Source-project report: tested on SpacemiT K3 with Android 17 and `ro.vendor.api_level=202604`; pages render and the renderer is sandboxed. Rebuilding and testing the RISE recipe are pending. |
+| Chromium 151.0.7922.108 (M151) — the pinned revision | RISE host rebuild completed on 2026-10-11 from the official base and bundled commits. APK verification passes. The inherited source-project APK had a K3 rendering/sandbox report; the rebuilt APK still needs board tests. |
 | RISE SpacemiT K3 | Uses the shared riscv64 M151 APK. RISE Android image and WebView runtime validation are pending. |
-| RISE Alibaba A210 | Uses the same APK. The prebuilt's riscv64 ELF headers were checked; A210 runtime validation is pending. |
+| RISE Alibaba A210 | Uses the same rebuilt APK. Its riscv64 ELF headers were checked; A210 runtime validation is pending. |
 | riscv64 support at the pinned base | Seven bundled commits are required over the official M151 revision. The first follows Gerrit patchset 11; see [The series](#the-series). |
 
 Do not read "verified" as "supported". This is a working recipe, not a product.
@@ -103,7 +103,11 @@ Run from the recipe checkout:
 ```
 
 The result is `workspace/src/out/riscv64/apks/SystemWebView64.apk`
-(145,131,247 bytes for the verified build).
+(145,131,247 bytes for the verified RISE host rebuild on 2026-10-11).
+The staged Android APK has SHA-256
+`09dae1f296faeb93e9d61cebdbca52111d21065358f45ee380e005176d73d006`.
+Its delivery source/build record is `device/rise/common/webview/webview-build.json`.
+That record describes this binary; regenerate it when replacing the APK.
 
 `WORKSPACE=/path/to/somewhere` relocates the checkout. Everything else is pinned in
 `scripts/config.sh` — change revisions there and nowhere else.
@@ -295,15 +299,16 @@ M142 and newer already carry them, and the code has since moved to
 
 - `-mstrict-align` is unconditional. A `riscv_strict_align` gn argument would let
   non-SpacemiT hardware opt out, but it does not exist yet.
-- The APK has been exercised by loading pages in the WebView shell and by checking
-  that the sandboxed renderer starts. That is not a test suite: nothing here runs
-  the Chromium or WebView CTS.
+- The inherited source-project APK was exercised by loading pages in the WebView
+  shell and checking the sandboxed renderer. The rebuilt RISE APK still needs
+  board runtime checks; this recipe does not run Chromium or WebView CTS.
 - Two test-only pieces of the sandbox changelist are not carried:
   `syscall_parameters_restrictions_unittest.cc` no longer exists upstream, and the
   riscv branch of `syscall_unittest.cc` (an ECALL opcode assertion) is missing.
   Neither is built by the WebView target, so neither affects the shipped APK.
-- Nothing here is upstreamed yet. Commits 4, 6 and 7 and patches 0002 and 0003 could
-  go as they are; the sandbox changelist and `-mstrict-align` need work first.
+- The bundled source and dependency patches target the pinned M151 inputs.
+  Changing Chromium versions requires reviewing the series and refreshing the
+  dependency patches against the new DEPS revisions.
 
 ## License
 
