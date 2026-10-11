@@ -108,6 +108,12 @@ The result is `workspace/src/out/riscv64/apks/SystemWebView64.apk`
 `WORKSPACE=/path/to/somewhere` relocates the checkout. Everything else is pinned in
 `scripts/config.sh` — change revisions there and nowhere else.
 
+The build keeps Dawn's Go cache under `workspace/.cache/go-build`, unless
+`GOCACHE` is already set. This avoids writing into the host user's home directory.
+APK verification uses Chromium's pinned `aapt2` from the checkout, so no separate
+host Android SDK is required. If that tool is absent, a host `aapt2` on `PATH`
+is required; package identity checks are always performed.
+
 Three things that will bite you otherwise:
 
 - **`02-apply-series.sh` uses the bundled patches without fetching a fork.** It
