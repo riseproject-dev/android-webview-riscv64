@@ -12,8 +12,8 @@ if [ ! -f "$APK" ]; then
 	die "no APK at $APK"
 fi
 
-TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+TMP="$(mktemp -d "${APK}.verification.XXXXXX")"
+echo "verification artifacts: $TMP"
 
 echo "apk:    $APK"
 echo "size:   $(stat -c %s "$APK") bytes"
