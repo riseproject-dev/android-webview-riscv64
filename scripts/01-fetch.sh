@@ -20,8 +20,7 @@ export PATH="$WORKSPACE/depot_tools:$PATH"
 # DEPS. Without it the build fails late, on a missing sysroot, with nothing
 # pointing back at this file. managed:False keeps gclient from moving src off the
 # pinned revision on every sync.
-if [ ! -f .gclient ]; then
-	cat > .gclient <<EOF
+gclient_spec="$(cat <<EOF
 solutions = [
   {
     "name": "src",
@@ -36,15 +35,24 @@ solutions = [
 ]
 target_os = ["android"]
 EOF
+)"
+if ! printf '%s\n' "$gclient_spec" | cmp -s - .gclient; then
+	if [ -e .gclient ]; then
+		gclient_backup="$(mktemp .gclient.before-rise.XXXXXX)"
+		cp -p .gclient "$gclient_backup"
+		echo "previous gclient configuration saved to $WORKSPACE/$gclient_backup"
+	fi
+	printf '%s\n' "$gclient_spec" > .gclient
 fi
 
 if [ ! -d src/.git ]; then
 	git init -q src
 	git -C src remote add origin "$CHROMIUM_REMOTE"
 fi
+git -C src remote set-url origin "$CHROMIUM_REMOTE"
 
 # Fetching the pinned commit directly keeps the clone small. Not every server
-# allows a fetch by SHA, so fall back to the release branch it lives on.
+# allows a fetch by SHA, so fall back to the RISE branch containing it.
 if ! git -C src fetch --depth 1 origin "$CHROMIUM_COMMIT" 2>/dev/null; then
 	echo "fetch by SHA refused, falling back to $CHROMIUM_FETCH_REF" >&2
 	git -C src fetch origin "$CHROMIUM_FETCH_REF"

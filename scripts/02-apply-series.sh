@@ -16,12 +16,14 @@ fi
 cd "$WORKSPACE/src"
 export PATH="$WORKSPACE/depot_tools:$PATH"
 
-if ! git remote get-url baylibre >/dev/null 2>&1; then
-	git remote add baylibre "$SERIES_REMOTE"
+if ! git remote get-url rise >/dev/null 2>&1; then
+	git remote add rise "$SERIES_REMOTE"
 fi
-git remote set-url baylibre "$SERIES_REMOTE"
-git fetch baylibre "$SERIES_BRANCH"
-git checkout -B riscv64-series "baylibre/$SERIES_BRANCH"
+git remote set-url rise "$SERIES_REMOTE"
+git fetch rise "$SERIES_BRANCH"
+git merge-base --is-ancestor "$CHROMIUM_COMMIT" "$SERIES_COMMIT" ||
+	die "the pinned series does not descend from the Chromium release"
+git checkout --detach "$SERIES_COMMIT"
 
 # The two changes below belong to sub-repositories, which a chromium/src fork
 # cannot carry. gclient owns these directories, so a later `gclient sync` reverts
