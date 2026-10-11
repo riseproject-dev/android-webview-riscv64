@@ -13,6 +13,7 @@ cd "$WORKSPACE"
 if [ ! -d depot_tools/.git ]; then
 	git clone "$DEPOT_TOOLS_REMOTE" depot_tools
 fi
+git -C depot_tools remote set-url origin "$DEPOT_TOOLS_REMOTE"
 git -C depot_tools checkout --detach "$DEPOT_TOOLS_COMMIT"
 export PATH="$WORKSPACE/depot_tools:$PATH"
 

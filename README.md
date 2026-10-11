@@ -22,8 +22,8 @@ the recipe reconstructs their original tip
 The RISE recipe contains every local source change needed for the APK.
 `depot_tools` and dependencies selected by `DEPS` come from their public upstreams.
 
-When reusing a workspace, `01-fetch.sh` aligns the Chromium `origin` and
-`.gclient` with the official Chromium URL. A changed `.gclient` is preserved in
+When reusing a workspace, `01-fetch.sh` aligns the Chromium and `depot_tools`
+origins and `.gclient` with their official URLs. A changed `.gclient` is preserved in
 `.gclient.before-rise.*` before it is replaced.
 
 K3 and A210 use the same `target_cpu = "riscv64"` build. The bundled series
