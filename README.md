@@ -3,9 +3,9 @@
 Everything needed to rebuild the Android **WebView** APK for **riscv64**, and to
 integrate it into an AOSP tree.
 
-Chromium has no official riscv64 Android target. AOSP's `external/chromium-webview`
-ships prebuilts for arm, arm64, x86 and x86_64 only, so a riscv64 Android image has
-no WebView provider at all: every app that embeds a `WebView` fails to start. This
+The pinned Chromium M151 revision needs local commits for riscv64 Android.
+The selected AOSP `external/chromium-webview` ships prebuilts for arm, arm64,
+x86 and x86_64 only, so a riscv64 Android image needs its own WebView provider. This
 repository carries the recipe and the original RISC-V commits as a patch series
 (see [Where things live](#where-things-live)).
 
@@ -35,10 +35,10 @@ a separate Chromium fork at RISE is optional.
 
 | Item | State |
 |---|---|
-| Chromium 151.0.7922.108 (M151 stable) — the pinned revision | Source-project report: tested on SpacemiT K3 with Android 17 and `ro.vendor.api_level=202604`; pages render and the renderer is sandboxed. Rebuilding and testing the RISE recipe are pending. |
+| Chromium 151.0.7922.108 (M151) — the pinned revision | Source-project report: tested on SpacemiT K3 with Android 17 and `ro.vendor.api_level=202604`; pages render and the renderer is sandboxed. Rebuilding and testing the RISE recipe are pending. |
 | RISE SpacemiT K3 | Uses the shared riscv64 M151 APK. RISE Android image and WebView runtime validation are pending. |
 | RISE Alibaba A210 | Uses the same APK. The prebuilt's riscv64 ELF headers were checked; A210 runtime validation is pending. |
-| riscv64 support upstream | **Not merged.** One of the seven commits is an unmerged Gerrit changelist, the rest are local. Three of them are straightforwardly upstreamable; see [The series](#the-series). |
+| riscv64 support at the pinned base | Seven bundled commits are required over the official M151 revision. The first follows Gerrit patchset 11; see [The series](#the-series). |
 
 Do not read "verified" as "supported". This is a working recipe, not a product.
 
@@ -136,7 +136,7 @@ Three things that will bite you otherwise:
 
 | # | Commit | Origin |
 |---|---|---|
-| 1 | `sandbox: Add support for riscv64-linux` | [crrev.com/c/4935120](https://chromium-review.googlesource.com/c/chromium/src/+/4935120) PS11, by Andreas Schwab. Not merged. |
+| 1 | `sandbox: Add support for riscv64-linux` | [crrev.com/c/4935120](https://chromium-review.googlesource.com/c/chromium/src/+/4935120) PS11, by Andreas Schwab. Applied over the pinned base. |
 | 2 | `build/config: riscv64: build with -mstrict-align` | local |
 | 3 | `android: do not apply the 32-bit version code offset on riscv64` | local |
 | 4 | `cpuinfo: enable the riscv linux sources on android` | local, upstreamable as is |
@@ -243,17 +243,16 @@ Keep the import device-local.
 
 `com.android.webview` is an *updatable* system app, so you can test a rebuild
 without reflashing and without `adb remount` (which on some images disables verity
-and breaks `apexd` on the next boot):
+and breaks `apexd` on the next boot). Set `AOSP_DIR` and `ADB_SERIAL` to your
+Android checkout and intended board:
 
 ```
-apksigner sign --key <aosp>/build/make/target/product/security/testkey.pk8 \
-  --cert <aosp>/build/make/target/product/security/testkey.x509.pem \
-  --out signed.apk workspace/src/out/riscv64/apks/SystemWebView64.apk
-adb install -r signed.apk
-adb shell pm path com.android.webview   # now under /data/app/
-adb shell am start -a android.intent.action.VIEW \
-  -d data:text/html,HELLO -n org.chromium.webview_shell/.WebViewBrowserActivity
-adb exec-out screencap -p > shot.png
+export AOSP_DIR=/path/to/aosp ADB_SERIAL=BOARD_SERIAL
+apksigner sign --key "$AOSP_DIR/build/make/target/product/security/testkey.pk8" --cert "$AOSP_DIR/build/make/target/product/security/testkey.x509.pem" --out signed.apk workspace/src/out/riscv64/apks/SystemWebView64.apk
+adb -s "$ADB_SERIAL" install -r signed.apk
+adb -s "$ADB_SERIAL" shell pm path com.android.webview
+adb -s "$ADB_SERIAL" shell am start -a android.intent.action.VIEW -d data:text/html,HELLO -n org.chromium.webview_shell/.WebViewBrowserActivity
+adb -s "$ADB_SERIAL" exec-out screencap -p > shot.png
 ```
 
 The APK must be re-signed with the key the image was signed with. `default_dev_cert:
