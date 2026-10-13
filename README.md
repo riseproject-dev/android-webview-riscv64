@@ -35,8 +35,8 @@ a separate Chromium fork at RISE is optional.
 
 | Item | State |
 |---|---|
-| Chromium 151.0.7922.108 (M151) — the pinned revision | RISE host rebuild completed on 2026-10-11 from the official base and bundled commits. APK verification passes. The inherited source-project APK had a K3 rendering/sandbox report; the rebuilt APK still needs board tests. |
-| RISE SpacemiT K3 | Uses the shared riscv64 M151 APK. RISE Android image and WebView runtime validation are pending. |
+| Chromium 151.0.7922.108 (M151) — the pinned revision | RISE host rebuild completed on 2026-10-11 from the official base and bundled commits. APK verification passes. The rebuilt provider passed a real-page test in the RISE K3 image on 2026-10-12; A210 runtime validation is pending. |
+| RISE SpacemiT K3 | Uses the shared riscv64 M151 APK. The RISE Android-installed provider passed the K3 real-page test. Android signs the installed APK with its development certificate. |
 | RISE Alibaba A210 | Uses the same rebuilt APK. Its riscv64 ELF headers were checked; A210 runtime validation is pending. |
 | riscv64 support at the pinned base | Seven bundled commits are required over the official M151 revision. The first follows Gerrit patchset 11; see [The series](#the-series). |
 
