@@ -106,8 +106,6 @@ The result is `workspace/src/out/riscv64/apks/SystemWebView64.apk`
 (145,131,247 bytes for the verified RISE host rebuild on 2026-10-11).
 The staged Android APK has SHA-256
 `09dae1f296faeb93e9d61cebdbca52111d21065358f45ee380e005176d73d006`.
-Its delivery source/build record is `device/rise/common/webview/webview-build.json`.
-That record describes this binary; regenerate it when replacing the APK.
 
 `WORKSPACE=/path/to/somewhere` relocates the checkout. Everything else is pinned in
 `scripts/config.sh` — change revisions there and nowhere else.
