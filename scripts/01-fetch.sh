@@ -16,6 +16,10 @@ fi
 git -C depot_tools remote set-url origin "$DEPOT_TOOLS_REMOTE"
 git -C depot_tools checkout --detach "$DEPOT_TOOLS_COMMIT"
 export PATH="$WORKSPACE/depot_tools:$PATH"
+# DEPOT_TOOLS_UPDATE=0 also skips the bootstrap of the depot_tools python3
+# and CIPD tools. The script needs an absolute path and never fails.
+"$WORKSPACE/depot_tools/ensure_bootstrap"
+[ -f depot_tools/python3_bin_reldir.txt ] || die "depot_tools bootstrap failed"
 
 # checkout_riscv64 is what pulls the riscv64 sysroot and toolchain entries out of
 # DEPS. Without it the build fails late, on a missing sysroot, with nothing
@@ -60,7 +64,9 @@ if ! git -C src fetch --depth 1 origin "$CHROMIUM_COMMIT" 2>/dev/null; then
 fi
 git -C src checkout --detach "$CHROMIUM_COMMIT"
 
-gclient sync
+# Anonymous googlesource access is rate limited per IP: fetch the
+# dependencies without history and with few parallel jobs.
+gclient sync --no-history -j 4
 
 echo
 echo "workspace ready: $WORKSPACE"

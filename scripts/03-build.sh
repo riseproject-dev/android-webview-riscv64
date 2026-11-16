@@ -11,7 +11,9 @@ if [ ! -d "$WORKSPACE/src/.git" ]; then
 	die "no checkout at $WORKSPACE/src -- run 01-fetch.sh first"
 fi
 cd "$WORKSPACE/src"
-export PATH="$WORKSPACE/depot_tools:$PATH"
+# The build scripts run "python3" from PATH. Use the depot_tools one, as a
+# newer host Python can reject them (3.14 fails on argparse help strings).
+export PATH="$WORKSPACE/depot_tools/python-bin:$WORKSPACE/depot_tools:$PATH"
 
 # A protobuf newer than 3.20 in ~/.local shadows the one Chromium's generated
 # _pb2.py files expect, and compile_resources dies with "Descriptors cannot not be
